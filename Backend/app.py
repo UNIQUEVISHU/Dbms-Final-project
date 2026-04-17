@@ -6,10 +6,8 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# CORS
 CORS(app)
 
-# CONFIG
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///learncircle.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -42,6 +40,7 @@ class User(db.Model):
     role = db.Column(db.String(20), default="student")
     points = db.Column(db.Integer, default=0)
     reputation_level = db.Column(db.Integer, default=1)
+    join_date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Circle(db.Model):
@@ -116,7 +115,7 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    return jsonify({'message': 'Registered'})
+    return jsonify({'message': 'Registered successfully'})
 
 
 @app.route('/api/login', methods=['POST'])
@@ -128,16 +127,48 @@ def login():
     if user and check_password_hash(user.password, data['password']):
         return jsonify({
             'id': user.id,
-            'username': user.username
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'points': user.points,
+            'reputation_level': user.reputation_level
         })
 
-    return jsonify({'error': 'Invalid'}), 401
+    return jsonify({'error': 'Invalid credentials'}), 401
+
+
+# ================= PROFILE =================
+
+@app.route('/api/users/<int:user_id>')
+def get_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "points": user.points
+    })
 
 
 # ================= CIRCLES =================
 
-@app.route('/api/circles')
-def get_circles():
+@app.route('/api/circles', methods=['GET', 'POST'])
+def circles():
+    if request.method == 'POST':
+        data = request.get_json()
+
+        circle = Circle(
+            title=data['title'],
+            description=data['description'],
+            creator_id=data['creator_id']
+        )
+
+        db.session.add(circle)
+        db.session.commit()
+
+        return jsonify({'message': 'Circle created'})
+
     circles = Circle.query.all()
 
     return jsonify([{
@@ -148,6 +179,22 @@ def get_circles():
 
 
 # ================= TASKS =================
+
+@app.route('/api/tasks', methods=['POST'])
+def create_task():
+    data = request.get_json()
+
+    task = Task(
+        title=data['title'],
+        description=data['description'],
+        circle_id=data['circle_id']
+    )
+
+    db.session.add(task)
+    db.session.commit()
+
+    return jsonify({'message': 'Task added'})
+
 
 @app.route('/api/circles/<int:id>/tasks')
 def get_tasks(id):
@@ -161,8 +208,22 @@ def get_tasks(id):
 
 # ================= CHAT =================
 
-@app.route('/api/circles/<int:id>/messages')
-def get_messages(id):
+@app.route('/api/circles/<int:id>/messages', methods=['GET', 'POST'])
+def messages(id):
+    if request.method == 'POST':
+        data = request.get_json()
+
+        msg = Message(
+            text=data['text'],
+            user_id=data['user_id'],
+            circle_id=id
+        )
+
+        db.session.add(msg)
+        db.session.commit()
+
+        return jsonify({'message': 'Sent'})
+
     msgs = Message.query.filter_by(circle_id=id).all()
 
     return jsonify([{
@@ -181,21 +242,37 @@ def seed_data():
 
     users = []
     for n in names:
-        users.append(User(username=n, email=f"{n}@gmail.com", password="123"))
+        users.append(User(
+            username=n,
+            email=f"{n}@gmail.com",
+            password=generate_password_hash("123")
+        ))
 
     db.session.add_all(users)
     db.session.commit()
 
     for i in range(1, 11):
-        db.session.add(Circle(title=f"Circle {i}", description="Sample circle", creator_id=1))
+        db.session.add(Circle(
+            title=f"{['React', 'Design', 'AI', 'System', 'Product'][i%5]} Circle {i}",
+            description="Learning group",
+            creator_id=1
+        ))
 
     db.session.commit()
 
     for i in range(1, 11):
-        db.session.add(Task(title=f"Task {i}", description="Complete it", circle_id=(i % 10) + 1))
+        db.session.add(Task(
+            title=f"Task {i}",
+            description="Complete this task",
+            circle_id=(i % 10) + 1
+        ))
 
     for i in range(1, 11):
-        db.session.add(Message(text=f"Message {i}", user_id=i, circle_id=(i % 10) + 1))
+        db.session.add(Message(
+            text=f"Message {i}",
+            user_id=(i % 10) + 1,
+            circle_id=(i % 10) + 1
+        ))
 
     db.session.commit()
 
