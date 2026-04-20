@@ -15,12 +15,9 @@ function CircleDetail() {
 
   // LOAD CIRCLE
   useEffect(() => {
-    fetch("http://localhost:5000/api/circles")
+    fetch(`http://localhost:5000/api/circles/${id}`)
       .then(res => res.json())
-      .then(data => {
-        const found = data.find(c => c.id === parseInt(id));
-        setCircle(found || null);
-      });
+      .then(data => setCircle(data));
   }, [id]);
 
   // LOAD TASKS
@@ -47,7 +44,7 @@ function CircleDetail() {
 
   // SEND MESSAGE
   const sendMessage = async () => {
-    if (!user) return alert("Login required");
+    if (!user?.id) return alert("Login required");
     if (!text.trim()) return;
 
     await fetch(`http://localhost:5000/api/circles/${id}/messages`, {
@@ -66,18 +63,20 @@ function CircleDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 p-6">
 
       {/* HEADER */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{circle?.title || "Loading..."}</h1>
+        <h1 className="text-3xl font-bold">
+          {circle?.title || "Loading..."}
+        </h1>
         <p className="text-gray-600">{circle?.description}</p>
       </div>
 
-      {/* MAIN GRID */}
+      {/* GRID */}
       <div className="grid md:grid-cols-2 gap-6">
 
-        {/* TASKS SECTION */}
+        {/* TASKS */}
         <div className="bg-white p-5 rounded-2xl shadow">
           <h2 className="text-xl font-semibold mb-4">Tasks</h2>
 
@@ -87,30 +86,36 @@ function CircleDetail() {
             tasks.map(t => (
               <div
                 key={t.id}
-                className="border p-3 rounded-lg mb-3"
+                className="border p-3 rounded-lg mb-3 hover:shadow"
               >
                 <p className="font-semibold">{t.title}</p>
-                <p className="text-sm text-gray-500">{t.description}</p>
+                <p className="text-sm text-gray-500">
+                  {t.description}
+                </p>
               </div>
             ))
           )}
         </div>
 
-        {/* CHAT SECTION */}
+        {/* CHAT */}
         <div className="bg-white p-5 rounded-2xl shadow flex flex-col">
           <h2 className="text-xl font-semibold mb-4">Chat</h2>
 
           {/* MESSAGES */}
-          <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+          <div className="flex-1 overflow-y-auto space-y-2 mb-3 max-h-[300px]">
             {messages.length === 0 ? (
               <p className="text-gray-500">No messages</p>
             ) : (
               messages.map((m, i) => (
                 <div
                   key={i}
-                  className="bg-gray-100 p-2 rounded-lg text-sm"
+                  className={`p-2 rounded-lg max-w-[70%] ${
+                    m.user_id === user?.id
+                      ? "bg-purple-500 text-white ml-auto"
+                      : "bg-gray-200"
+                  }`}
                 >
-                  <strong>User {m.user_id}:</strong> {m.text}
+                  {m.text}
                 </div>
               ))
             )}
@@ -124,9 +129,10 @@ function CircleDetail() {
               placeholder="Type message..."
               className="flex-1 border p-2 rounded-lg"
             />
+
             <button
               onClick={sendMessage}
-              className="bg-purple-600 text-white px-4 rounded-lg"
+              className="bg-purple-600 text-white px-4 rounded-lg hover:bg-purple-700"
             >
               Send
             </button>

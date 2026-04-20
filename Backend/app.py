@@ -13,7 +13,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ================= CORS FIX =================
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
@@ -25,12 +24,11 @@ def after_request(response):
 def options_handler(path):
     return '', 200
 
-# ================= ROOT =================
 @app.route('/')
 def home():
     return "Backend running 🚀"
 
-# ================= MODELS (9 TABLES) =================
+# ================= MODELS =================
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -41,6 +39,8 @@ class User(db.Model):
     points = db.Column(db.Integer, default=0)
     reputation_level = db.Column(db.Integer, default=1)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
+    badges = db.Column(db.String(200), default="")
+    is_active = db.Column(db.Boolean, default=True)
 
 
 class Circle(db.Model):
@@ -48,12 +48,16 @@ class Circle(db.Model):
     title = db.Column(db.String(200))
     description = db.Column(db.Text)
     creator_id = db.Column(db.Integer)
+    tags = db.Column(db.String(200), default="")
+    privacy = db.Column(db.String(20), default="public")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class CircleMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)
     circle_id = db.Column(db.Integer)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Resource(db.Model):
@@ -62,20 +66,24 @@ class Resource(db.Model):
     content = db.Column(db.Text)
     circle_id = db.Column(db.Integer)
     creator_id = db.Column(db.Integer)
+    resource_type = db.Column(db.String(20), default="link")
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
     description = db.Column(db.Text)
-    due_date = db.Column(db.DateTime)
+    due_date = db.Column(db.DateTime, nullable=True)
     circle_id = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class TaskCompletion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     task_id = db.Column(db.Integer)
     user_id = db.Column(db.Integer)
+    completion_date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Comment(db.Model):
@@ -83,6 +91,7 @@ class Comment(db.Model):
     text = db.Column(db.Text)
     user_id = db.Column(db.Integer)
     resource_id = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Message(db.Model):
@@ -98,7 +107,7 @@ class PointsHistory(db.Model):
     user_id = db.Column(db.Integer)
     points = db.Column(db.Integer)
     reason = db.Column(db.String(200))
-
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ================= AUTH =================
 
@@ -136,8 +145,6 @@ def login():
 
     return jsonify({'error': 'Invalid credentials'}), 401
 
-
-# ================= PROFILE =================
 
 @app.route('/api/users/<int:user_id>')
 def get_user(user_id):
@@ -235,52 +242,69 @@ def messages(id):
 # ================= SEED DATA =================
 
 def seed_data():
-    if User.query.first():
-        return
+    db.drop_all()
+    db.create_all()
 
-    names = ["mayank", "yatika", "vishu", "aditya", "aryan", "rahul", "rohit", "karan", "sneha", "priya"]
+    # USERS
+    u1 = User(username="mayank", email="mayank@gmail.com", password=generate_password_hash("123"), role="creator")
+    u2 = User(username="yatika", email="yatika@gmail.com", password=generate_password_hash("123"), role="creator")
+    u3 = User(username="vishu", email="vishu@gmail.com", password=generate_password_hash("123"), role="creator")
+    u4 = User(username="aditya", email="aditya@gmail.com", password=generate_password_hash("123"))
+    u5 = User(username="aryan", email="aryan@gmail.com", password=generate_password_hash("123"))
+    u6 = User(username="rahul", email="rahul@gmail.com", password=generate_password_hash("123"))
+    u7 = User(username="rohit", email="rohit@gmail.com", password=generate_password_hash("123"))
+    u8 = User(username="karan", email="karan@gmail.com", password=generate_password_hash("123"))
+    u9 = User(username="sneha", email="sneha@gmail.com", password=generate_password_hash("123"))
+    u10 = User(username="priya", email="priya@gmail.com", password=generate_password_hash("123"))
 
-    users = []
-    for n in names:
-        users.append(User(
-            username=n,
-            email=f"{n}@gmail.com",
-            password=generate_password_hash("123")
-        ))
-
-    db.session.add_all(users)
+    db.session.add_all([u1,u2,u3,u4,u5,u6,u7,u8,u9,u10])
     db.session.commit()
 
-    for i in range(1, 11):
-        db.session.add(Circle(
-            title=f"{['React', 'Design', 'AI', 'System', 'Product'][i%5]} Circle {i}",
-            description="Learning group",
-            creator_id=1
-        ))
-
+    # CIRCLES
+    for i in range(1,11):
+        db.session.add(Circle(title=f"Circle {i}", description=f"Desc {i}", creator_id=(i%3)+1))
     db.session.commit()
 
-    for i in range(1, 11):
-        db.session.add(Task(
-            title=f"Task {i}",
-            description="Complete this task",
-            circle_id=(i % 10) + 1
-        ))
-
-    for i in range(1, 11):
-        db.session.add(Message(
-            text=f"Message {i}",
-            user_id=(i % 10) + 1,
-            circle_id=(i % 10) + 1
-        ))
-
+    # MEMBERS (10 rows)
+    for i in range(1,11):
+        db.session.add(CircleMember(user_id=i, circle_id=i))
     db.session.commit()
 
+    # RESOURCES (10 rows)
+    for i in range(1,11):
+        db.session.add(Resource(title=f"Res {i}", content=f"Content {i}", circle_id=i, creator_id=1))
+    db.session.commit()
+
+    # TASKS (10 rows)
+    for i in range(1,11):
+        db.session.add(Task(title=f"Task {i}", description=f"Do {i}", circle_id=i))
+    db.session.commit()
+
+    # TASK COMPLETION (10 rows)
+    for i in range(1,11):
+        db.session.add(TaskCompletion(task_id=i, user_id=i))
+    db.session.commit()
+
+    # COMMENTS (10 rows)
+    for i in range(1,11):
+        db.session.add(Comment(text=f"Comment {i}", user_id=i, resource_id=i))
+    db.session.commit()
+
+    # MESSAGES (10 rows)
+    for i in range(1,11):
+        db.session.add(Message(text=f"Message {i}", user_id=i, circle_id=i))
+    db.session.commit()
+
+    # POINTS HISTORY (10 rows)
+    for i in range(1,11):
+        db.session.add(PointsHistory(user_id=i, points=10*i, reason="Activity"))
+    db.session.commit()
 
 # ================= RUN =================
 
 if __name__ == '__main__':
     with app.app_context():
+        db.drop_all()   # 🔥 important fix
         db.create_all()
         seed_data()
 

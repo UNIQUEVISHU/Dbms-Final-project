@@ -16,7 +16,7 @@ function App() {
   return (
     <BrowserRouter>
 
-      {/* ✅ Navbar always visible */}
+      {/* Navbar */}
       <Navbar setShowLogin={setShowLogin} />
 
       <Routes>
@@ -27,7 +27,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
       </Routes>
 
-      {/* ✅ Global Login Modal */}
+      {/* Login Modal */}
       {showLogin && (
         <LoginModal close={() => setShowLogin(false)} />
       )}
