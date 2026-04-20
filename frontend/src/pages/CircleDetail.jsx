@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 
 function CircleDetail() {
   const { id } = useParams();
@@ -9,9 +10,7 @@ function CircleDetail() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
 
-  const user = localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user"))
-    : null;
+  const { user } = useUser(); // 🔥 Clerk user
 
   // LOAD CIRCLE
   useEffect(() => {
@@ -44,7 +43,7 @@ function CircleDetail() {
 
   // SEND MESSAGE
   const sendMessage = async () => {
-    if (!user?.id) return alert("Login required");
+    if (!user) return alert("Login required");
     if (!text.trim()) return;
 
     await fetch(`http://localhost:5000/api/circles/${id}/messages`, {
@@ -54,7 +53,7 @@ function CircleDetail() {
       },
       body: JSON.stringify({
         text,
-        user_id: user.id
+        clerk_id: user.id   // 🔥 CHANGE HERE
       })
     });
 
@@ -110,7 +109,7 @@ function CircleDetail() {
                 <div
                   key={i}
                   className={`p-2 rounded-lg max-w-[70%] ${
-                    m.user_id === user?.id
+                    m.user_id === m.user_id && user && m.user_id === m.user_id
                       ? "bg-purple-500 text-white ml-auto"
                       : "bg-gray-200"
                   }`}

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
 
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
@@ -12,6 +13,25 @@ import LoginModal from "./components/LoginModal";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
+
+  const { user } = useUser();  // 🔥 Clerk user
+
+  // 🔥 USER SYNC WITH BACKEND
+  useEffect(() => {
+    if (user) {
+      fetch("http://localhost:5000/api/sync-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clerkId: user.id,
+          email: user.primaryEmailAddress?.emailAddress,
+          username: user.username,
+        }),
+      });
+    }
+  }, [user]);
 
   return (
     <BrowserRouter>

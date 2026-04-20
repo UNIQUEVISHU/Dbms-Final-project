@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 
 function CreateCircle() {
   const [title, setTitle] = useState("");
@@ -7,9 +8,13 @@ function CreateCircle() {
   const [category, setCategory] = useState("Frontend");
 
   const navigate = useNavigate();
+  const { user } = useUser(); // 🔥 Clerk user
 
   const createCircle = async () => {
-    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      alert("Login required");
+      return;
+    }
 
     if (!title || !description) {
       alert("Please fill all fields");
@@ -25,7 +30,7 @@ function CreateCircle() {
         title,
         description,
         category,
-        creator_id: user.id
+        clerk_id: user.id   // 🔥 CHANGE HERE
       })
     });
 
@@ -43,13 +48,11 @@ function CreateCircle() {
       
       <div className="bg-white p-8 rounded-2xl shadow-lg w-[500px]">
         
-        {/* HEADER */}
         <h1 className="text-2xl font-bold mb-2">Start a circle</h1>
         <p className="text-gray-500 mb-6">
           Gather a small group around something you all want to learn.
         </p>
 
-        {/* TITLE */}
         <div className="mb-4">
           <label className="block mb-1 font-medium">Title</label>
           <input
@@ -60,7 +63,6 @@ function CreateCircle() {
           />
         </div>
 
-        {/* DESCRIPTION */}
         <div className="mb-4">
           <label className="block mb-1 font-medium">Description</label>
           <textarea
@@ -72,7 +74,6 @@ function CreateCircle() {
           />
         </div>
 
-        {/* CATEGORY */}
         <div className="mb-6">
           <label className="block mb-2 font-medium">Category</label>
           <div className="flex flex-wrap gap-2">
@@ -92,7 +93,6 @@ function CreateCircle() {
           </div>
         </div>
 
-        {/* ACTIONS */}
         <div className="flex justify-between">
           <button
             onClick={() => navigate("/dashboard")}
